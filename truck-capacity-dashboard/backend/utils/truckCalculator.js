@@ -1,16 +1,51 @@
+const Order = require('../models/OrderSummary.js');
+
 const TRUCK_CAPACITIES = {
   JUMBO_4M: 21.0,
   JUMBO: 9.5,
   DABBABA: 5.0,
 };
 
-function calculateTrucks(cbm) {
+function calculateTrucks(cbm, branchName) {
   let remainingCbm = cbm;
   const trucks = {
     jumbo4m: 0,
     jumbo: 0,
     dabbaba: 0,
   };
+
+  const No_Jumbo = [
+    "OUT 6th of October FP #3",
+    "6th of October FP #7",
+    "Sheikh Zayed City FP #2",
+    "Haram FP#2",
+    "Garden City",
+    "Maadi FP #1",
+    "Maadi FP#3",
+    "Maadi FP#5",
+    "Al Rehab City FP #2",
+    "New Cairo FP #4",
+    "New Cairo FP#6",
+    "New Cairo FP #7",
+    "New Cairo FP #8",
+    "Shorouk FP #1",
+    "Shorouk FP #3",
+    "Nasr City FP#3",
+    "Nasr City FP#4",
+    "Heliopolis FP #1",
+    "Heliopolis FP #2",
+    "Ein Shams FP#1",
+    "Manial FP#1"
+  ];
+
+  if (No_Jumbo.includes(branchName)) {
+    while (remainingCbm > 0) {
+      trucks.dabbaba += 1;
+      remainingCbm -= TRUCK_CAPACITIES.DABBABA;
+    }
+    return trucks;
+  }
+  
 
   while (remainingCbm > 0) {
     if (remainingCbm >= TRUCK_CAPACITIES.JUMBO_4M) {
@@ -20,11 +55,11 @@ function calculateTrucks(cbm) {
       trucks.jumbo += 1;
       remainingCbm -= TRUCK_CAPACITIES.JUMBO;
     } else if (remainingCbm > TRUCK_CAPACITIES.DABBABA && remainingCbm <= TRUCK_CAPACITIES.JUMBO) {
-       trucks.jumbo += 1;
-       remainingCbm = 0;
+      trucks.jumbo += 1;
+      remainingCbm = 0;
     } else {
       trucks.dabbaba += 1;
-      remainingCbm -= TRUCK_CAPACITIES.DABBABA;
+      remainingCbm = 0;
     }
   }
 

@@ -7,7 +7,7 @@ const OrderSummary = require('../models/OrderSummary');
 const Product = require('../models/Product');
 const SyncConfig = require('../models/SyncConfig');
 const { calculateTrucks, getConsolidationSuggestions } = require('../utils/truckCalculator');
-const { findServiceAccountKeyPath, extractSpreadsheetId } = require('./productSyncService');
+const { findServiceAccountKeyPath, extractSpreadsheetId, syncFromGoogleSheet } = require('./productSyncService');
 
 const cleanStr = (val) => {
   if (val === null || val === undefined) return '';
@@ -90,46 +90,74 @@ const formatBranchName = (raw) => {
 };
 
 const guessZone = (branchName, rawLocation = '') => {
-  const combined = (String(branchName) + ' ' + String(rawLocation)).toLowerCase();
-  if (combined.includes('october') || combined.includes('zayed') || combined.includes('اكتوبر') || combined.includes('زايد') || combined.includes('haram') || combined.includes('الهرم') || combined.includes('faisal') || combined.includes('فيصل') || combined.includes('giza') || combined.includes('الجيزة') || combined.includes('dokki') || combined.includes('الدقي') || combined.includes('mohandessin') || combined.includes('المهندسين')) {
+  const name = String(branchName).trim();
+
+  const baseZone = name
+    .replace(/\s*FP\s*#?\s*\d+\s*$/i, '')  
+    .replace(/\s*(#\d+|\d+)\s*$/i, '')     
+    .replace(/^OUT\s+/i, '')                
+    .trim();
+
+  
+  if (baseZone && baseZone.length > 2) {
+    return baseZone;
+  }
+
+  
+  const combined = (name + ' ' + String(rawLocation)).toLowerCase();
+  if (combined.includes('october') || combined.includes('zayed') || combined.includes('haram') || combined.includes('faisal') || combined.includes('giza') || combined.includes('dokki') || combined.includes('mohandessin')) {
     return 'Giza / 6th of October';
   }
-  if (combined.includes('maadi') || combined.includes('mokattam') || combined.includes('المعادي') || combined.includes('المقطم') || combined.includes('helwan') || combined.includes('حلوان') || combined.includes('basateen') || combined.includes('البساتين')) {
+  if (combined.includes('maadi') || combined.includes('mokattam') || combined.includes('helwan') || combined.includes('basateen')) {
     return 'South Cairo';
   }
-  if (combined.includes('nasr') || combined.includes('heliopolis') || combined.includes('مدينة نصر') || combined.includes('مصر الجديدة') || combined.includes('sheraton') || combined.includes('شيراتون') || combined.includes('nozha') || combined.includes('النزهة') || combined.includes('obour') || combined.includes('العبور') || combined.includes('shorouk') || combined.includes('الشروق')) {
+  if (combined.includes('nasr') || combined.includes('heliopolis') || combined.includes('sheraton') || combined.includes('nozha') || combined.includes('obour') || combined.includes('shorouk')) {
     return 'East Cairo';
   }
-  if (combined.includes('tagamoa') || combined.includes('rehab') || combined.includes('madinaty') || combined.includes('التجمع') || combined.includes('الرحاب') || combined.includes('مدينتي') || combined.includes('mostakbal') || combined.includes('المستقبل') || combined.includes('new cairo') || combined.includes('القاهرة الجديدة')) {
+  if (combined.includes('tagamoa') || combined.includes('rehab') || combined.includes('madinaty') || combined.includes('mostakbal') || combined.includes('new cairo')) {
     return 'New Cairo';
   }
-  if (combined.includes('alex') || combined.includes('اسكندرية') || combined.includes('الإسكندرية') || combined.includes('agami') || combined.includes('العجمي') || combined.includes('smouha') || combined.includes('سموحة')) {
+  if (combined.includes('alex') || combined.includes('agami') || combined.includes('smouha')) {
     return 'Alexandria';
   }
   return 'General Zone';
 };
 
-/**
- * Common order row processing logic
- */
+
 async function processOrderRows(data) {
   if (!data || data.length === 0) {
     throw new Error('No valid data rows found in Orders sheet');
   }
 
-  // Load products with lean projection for speed
-  const products = await Product.find({}, { productId: 1, name: 1, cbm: 1 }).lean();
+  let products = await Product.find({}, { productId: 1, name: 1, cbm: 1 }).lean();
+  if (products.length === 0) {
+    console.log('[OrderSync] No products found in DB. Auto-syncing products from Google Sheet (Data + Single Items)...');
+    try {
+      await syncFromGoogleSheet();
+      products = await Product.find({}, { productId: 1, name: 1, cbm: 1 }).lean();
+    } catch (e) {
+      console.warn('[OrderSync] Auto product sync attempt:', e.message);
+    }
+  }
   const productMapById = {};
   const productMapByName = {};
 
   products.forEach(p => {
     if (p.productId) {
       const cleanId = cleanStr(p.productId).toLowerCase();
-      if (cleanId) productMapById[cleanId] = p;
+      if (cleanId) {
+        if (!productMapById[cleanId] || (p.cbm > 0 && !productMapById[cleanId].cbm)) {
+          productMapById[cleanId] = p;
+        }
+      }
     }
     if (p.name) {
       const cleanName = cleanStr(p.name).toLowerCase();
-      if (cleanName) productMapByName[cleanName] = p;
+      if (cleanName) {
+        if (!productMapByName[cleanName] || (p.cbm > 0 && !productMapByName[cleanName].cbm)) {
+          productMapByName[cleanName] = p;
+        }
+      }
     }
   });
 
@@ -303,7 +331,7 @@ async function processOrderRows(data) {
 
   for (const [branchName, totals] of Object.entries(branchTotals)) {
     if (totals.cbm > 0 || totals.qty > 0) {
-      const recommendedTrucks = calculateTrucks(totals.cbm);
+      const recommendedTrucks = calculateTrucks(totals.cbm, branchName);
       const items = Object.values(totals.itemsMap);
       
       const order = new OrderSummary({
@@ -345,9 +373,7 @@ async function processOrderRows(data) {
   };
 }
 
-/**
- * Reads Google Sheet's "Orders" tab using official Google Sheets API v4 with Service Account
- */
+
 async function fetchOrdersViaServiceAccount(spreadsheetId, keyFilePath) {
   const auth = new google.auth.GoogleAuth({
     keyFile: keyFilePath,
@@ -356,7 +382,7 @@ async function fetchOrdersViaServiceAccount(spreadsheetId, keyFilePath) {
 
   const sheets = google.sheets({ version: 'v4', auth });
 
-  // 1. Fetch metadata to locate sheet titled "Orders" (case-insensitive)
+
   const meta = await sheets.spreadsheets.get({ spreadsheetId });
   const sheetList = meta.data.sheets || [];
   if (sheetList.length === 0) {
@@ -368,7 +394,7 @@ async function fetchOrdersViaServiceAccount(spreadsheetId, keyFilePath) {
 
   console.log(`[OrderSync] Fetching tab "${sheetTitle}" from spreadsheet ${spreadsheetId}`);
 
-  // 2. Fetch all values from the Orders sheet
+
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: `'${sheetTitle}'!A1:ZZ`,
@@ -413,9 +439,7 @@ async function fetchOrdersViaServiceAccount(spreadsheetId, keyFilePath) {
   return rowObjects;
 }
 
-/**
- * Downloads sheet using public export link as fallback and reads "Orders" tab
- */
+
 async function fetchOrdersViaExportLink(spreadsheetId) {
   const exportUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
   const response = await axios.get(exportUrl, {
@@ -459,9 +483,8 @@ async function fetchOrdersViaExportLink(spreadsheetId) {
   return xlsx.utils.sheet_to_json(sheet, { range: headerIndex });
 }
 
-/**
- * Main method to sync orders from the "Orders" tab in Google Sheets
- */
+
+
 async function syncOrdersFromGoogleSheet(sheetUrlOverride = null) {
   let config = await SyncConfig.findOne({ key: 'ordersSheetSync' });
   if (!config) {
@@ -494,7 +517,21 @@ async function syncOrdersFromGoogleSheet(sheetUrlOverride = null) {
     const serviceAccountKeyPath = findServiceAccountKeyPath();
 
     if (serviceAccountKeyPath) {
-      rowObjects = await fetchOrdersViaServiceAccount(spreadsheetId, serviceAccountKeyPath);
+      try {
+        rowObjects = await fetchOrdersViaServiceAccount(spreadsheetId, serviceAccountKeyPath);
+      } catch (saError) {
+        console.warn(`[OrderSync] Service Account error (${saError.message}). Attempting export fallback...`);
+        try {
+          rowObjects = await fetchOrdersViaExportLink(spreadsheetId);
+        } catch (exportError) {
+          if (saError.message && saError.message.includes('invalid_grant')) {
+            throw new Error(
+              'Google Auth failed with "invalid_grant" (System clock out of sync). Please synchronize your computer\'s date and time in Windows Settings.'
+            );
+          }
+          throw saError;
+        }
+      }
     } else {
       console.log('[OrderSync] No service account key found, falling back to export link...');
       rowObjects = await fetchOrdersViaExportLink(spreadsheetId);
