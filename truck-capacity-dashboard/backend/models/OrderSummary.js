@@ -4,6 +4,7 @@ const orderItemSchema = new mongoose.Schema(
   {
     productId: { type: String, default: '' },
     productName: { type: String, default: '' },
+    category: { type: String, default: '' },
     qty: { type: Number, default: 0 },
     cbm: { type: Number, default: 0 },
     unitCbm: { type: Number, default: 0 }
@@ -39,6 +40,7 @@ const orderSummarySchema = new mongoose.Schema(
     recommendedTrucks: {
       jumbo4m: { type: Number, default: 0 },
       jumbo: { type: Number, default: 0 },
+      NKR: { type: Number, default: 0 },
       dabbaba: { type: Number, default: 0 }
     },
     actualTrucks: {

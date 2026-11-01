@@ -10,9 +10,21 @@ function calculateTrucks(cbm, branchName) {
   let remainingCbm = cbm;
   const trucks = {
     jumbo4m: 0,
-    nkr: 0,
+    NKR: 0,
     dabbaba: 0,
   };
+
+  const No_NKR = [
+    "OUT 6th of October FP #7",
+    "OUT Maadi FP #1",
+    "OUT New Cairo FP #4",
+    "OUT New Cairo FP#6",
+    "OUT New Cairo FP #7",
+    "OUT Shorouk FP #3",
+    "OUT Nasr City FP#3",
+    "OUT Ein Shams FP#1",
+    "OUT Manial FP#1"
+  ];
 
   const No_Jumbo = [
     "OUT 6th of October FP #3",
@@ -40,28 +52,46 @@ function calculateTrucks(cbm, branchName) {
 
   const normalize = (s) => String(s).trim().replace(/\s+/g, ' ').replace(/\s*#\s*/g, '#').toLowerCase();
   const normalizedBranch = normalize(branchName);
-  if (No_Jumbo.some(name => normalize(name) === normalizedBranch)) {
+
+
+  if (No_NKR.some(name => normalize(name) === normalizedBranch)) {
     while (remainingCbm > 0) {
       trucks.dabbaba += 1;
       remainingCbm -= TRUCK_CAPACITIES.DABBABA;
     }
     return trucks;
   }
-  
+
+
+  if (No_Jumbo.some(name => normalize(name) === normalizedBranch)) {
+    while (remainingCbm > 0) {
+      if (remainingCbm >= TRUCK_CAPACITIES.NKR) {
+        trucks.NKR += 1;
+        remainingCbm -= TRUCK_CAPACITIES.NKR;
+      } else if (remainingCbm > TRUCK_CAPACITIES.DABBABA) {
+        trucks.NKR += 1;
+        remainingCbm = 0;
+      } else {
+        trucks.dabbaba += 1;
+        remainingCbm -= TRUCK_CAPACITIES.DABBABA;
+      }
+    }
+    return trucks;
+  }
 
   while (remainingCbm > 0) {
     if (remainingCbm >= TRUCK_CAPACITIES.JUMBO_4M) {
       trucks.jumbo4m += 1;
       remainingCbm -= TRUCK_CAPACITIES.JUMBO_4M;
-    } else if (remainingCbm >= TRUCK_CAPACITIES.NKR) {
-      trucks.nkr += 1;
-      remainingCbm -= TRUCK_CAPACITIES.NKR;
-    } else if (remainingCbm > TRUCK_CAPACITIES.DABBABA && remainingCbm <= TRUCK_CAPACITIES.NKR) {
-      trucks.nkr += 1;
+    } else if (remainingCbm > TRUCK_CAPACITIES.NKR) {
+      trucks.jumbo4m += 1;
+      remainingCbm = 0;
+    } else if (remainingCbm > TRUCK_CAPACITIES.DABBABA) {
+      trucks.NKR += 1;
       remainingCbm = 0;
     } else {
       trucks.dabbaba += 1;
-      remainingCbm = 0;
+      remainingCbm -= TRUCK_CAPACITIES.DABBABA;
     }
   }
 
@@ -79,9 +109,9 @@ function getConsolidationTruckDescription(totalVolume) {
     const trucks = calculateTrucks(totalVolume);
     const parts = [];
     if (trucks.jumbo4m > 0) parts.push(`${trucks.jumbo4m} Jumbo 4M`);
-    if (trucks.nkr > 0) parts.push(`${trucks.nkr} NKR`);
+    if (trucks.NKR > 0) parts.push(`${trucks.NKR} NKR`);
     if (trucks.dabbaba > 0) parts.push(`${trucks.dabbaba} Dabbaba`);
-    const totalCount = trucks.jumbo4m + trucks.nkr + trucks.dabbaba;
+    const totalCount = trucks.jumbo4m + trucks.NKR + trucks.dabbaba;
     return `${parts.join(' and ')} ${totalCount > 1 ? 'trucks' : 'truck'}`;
   }
 }

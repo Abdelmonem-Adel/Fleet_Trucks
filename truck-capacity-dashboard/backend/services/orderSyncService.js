@@ -129,12 +129,12 @@ async function processOrderRows(data) {
     throw new Error('No valid data rows found in Orders sheet');
   }
 
-  let products = await Product.find({}, { productId: 1, name: 1, cbm: 1 }).lean();
+  let products = await Product.find({}, { productId: 1, name: 1, category: 1, cbm: 1 }).lean();
   if (products.length === 0) {
     console.log('[OrderSync] No products found in DB. Auto-syncing products from Google Sheet (Data + Single Items)...');
     try {
       await syncFromGoogleSheet();
-      products = await Product.find({}, { productId: 1, name: 1, cbm: 1 }).lean();
+      products = await Product.find({}, { productId: 1, name: 1, category: 1, cbm: 1 }).lean();
     } catch (e) {
       console.warn('[OrderSync] Auto product sync attempt:', e.message);
     }
@@ -310,6 +310,7 @@ async function processOrderRows(data) {
       branchTotals[effectiveBranch].itemsMap[itemKey] = {
         productId: productId || (matchedProduct ? matchedProduct.productId : ''),
         productName: productName || (matchedProduct ? matchedProduct.name : ''),
+        category: matchedProduct?.category || '',
         qty: 0,
         cbm: 0,
         unitCbm: unitCbm

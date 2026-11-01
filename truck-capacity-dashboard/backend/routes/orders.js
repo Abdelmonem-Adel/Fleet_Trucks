@@ -285,7 +285,7 @@ router.get('/export', async (req, res) => {
       'Total QTY': o.totalQty,
       'Total Volume (CBM)': parseFloat((o.totalCbm || 0).toFixed(3)),
       'Recommended Jumbo 4M': o.recommendedTrucks?.jumbo4m || 0,
-      'Recommended Jumbo': o.recommendedTrucks?.jumbo || 0,
+      'Recommended NKR': o.recommendedTrucks?.NKR || 0,
       'Recommended Dabbaba': o.recommendedTrucks?.dabbaba || 0,
       'Actual Trucks': o.actualTrucks || ''
     }));
@@ -330,3 +330,4 @@ router.get('/export', async (req, res) => {
 });
 
 module.exports = router;
+

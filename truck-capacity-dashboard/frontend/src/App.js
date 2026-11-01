@@ -36,15 +36,6 @@ function App() {
     setAlerts(data.alerts);
   };
 
-  const handleUpdateActualTrucks = async (id, actualTrucks) => {
-    try {
-      await axios.patch(`http://localhost:5000/api/orders/${id}/actual`, { actualTrucks });
-      fetchLatestOrders();
-    } catch (error) {
-      console.error('Error updating actual trucks:', error);
-    }
-  };
-
   const handleExportExcel = () => {
     window.open('http://localhost:5000/api/orders/export', '_blank');
   };
@@ -125,7 +116,7 @@ function App() {
             {loading ? (
               <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>
             ) : (
-              <OrdersTable orders={orders} onUpdateActual={handleUpdateActualTrucks} />
+              <OrdersTable orders={orders} />
             )}
           </div>
         </div>
