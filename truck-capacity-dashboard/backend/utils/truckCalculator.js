@@ -1,9 +1,9 @@
 const Order = require('../models/OrderSummary.js');
 
 const TRUCK_CAPACITIES = {
-  JUMBO_4M: 21.0,
-  NKR: 9.5,
-  DABBABA: 5.0,
+  JUMBO_4M: 18.2,
+  NKR: 8.2,
+  DABBABA: 4.2,
 };
 
 function calculateTrucks(cbm, branchName) {

@@ -279,16 +279,27 @@ router.get('/export', async (req, res) => {
     });
 
     
-    const summaryRows = orders.map(o => ({
-      'Branch Name': o.branchName,
-      'Zone': o.zone || '',
-      'Total QTY': o.totalQty,
-      'Total Volume (CBM)': parseFloat((o.totalCbm || 0).toFixed(3)),
-      'Recommended Jumbo 4M': o.recommendedTrucks?.jumbo4m || 0,
-      'Recommended NKR': o.recommendedTrucks?.NKR || 0,
-      'Recommended Dabbaba': o.recommendedTrucks?.dabbaba || 0,
-      'Actual Trucks': o.actualTrucks || ''
-    }));
+    const summaryRows = orders.map(o => {
+      const totalTruckCbm =
+        ((o.recommendedTrucks?.jumbo4m || 0) * 18.2) +
+        ((o.recommendedTrucks?.NKR || 0) * 8.2) +
+        ((o.recommendedTrucks?.dabbaba || 0) * 4.2);
+      const utilization = totalTruckCbm > 0
+        ? `${Math.round(((o.totalCbm || 0) / totalTruckCbm) * 100)}%`
+        : '-';
+
+      return {
+        'Branch Name': o.branchName,
+        'Zone': o.zone || '',
+        'Total QTY': o.totalQty,
+        'Total Volume (CBM)': parseFloat((o.totalCbm || 0).toFixed(3)),
+        'Recommended Jumbo 4M': o.recommendedTrucks?.jumbo4m || 0,
+        'Recommended NKR': o.recommendedTrucks?.NKR || 0,
+        'Recommended Dabbaba': o.recommendedTrucks?.dabbaba || 0,
+        'Truck Utilization %': utilization,
+        'Actual Trucks': o.actualTrucks || ''
+      };
+    });
 
     
     const itemRows = [];

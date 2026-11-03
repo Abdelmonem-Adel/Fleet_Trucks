@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Search, SlidersHorizontal, X } from 'lucide-react';
 
+const TRUCK_CAPACITIES = {
+  jumbo4m: 18.2,
+  NKR: 8.2,
+  dabbaba: 4.2,
+};
+
 const OrdersTable = ({ orders }) => {
   const [expandedOrders, setExpandedOrders] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,6 +115,7 @@ const OrdersTable = ({ orders }) => {
             <th scope="col" className="px-4 py-3 text-center">QTY</th>
             <th scope="col" className="px-4 py-3 text-center">CBM</th>
             <th scope="col" className="px-4 py-3">Recommended Trucks</th>
+            <th scope="col" className="px-4 py-3 text-center">Truck Utilization %</th>
           </tr>
         </thead>
         <tbody>
@@ -174,12 +181,41 @@ const OrdersTable = ({ orders }) => {
                       )}
                     </div>
                   </td>
+                  <td className="px-4 py-4 text-center font-medium">
+                    {(() => {
+                      const totalTruckCbm =
+                        ((order.recommendedTrucks?.jumbo4m || 0) * TRUCK_CAPACITIES.jumbo4m) +
+                        ((order.recommendedTrucks?.NKR || 0) * TRUCK_CAPACITIES.NKR) +
+                        ((order.recommendedTrucks?.dabbaba || 0) * TRUCK_CAPACITIES.dabbaba);
+                      
+                      if (!totalTruckCbm || totalTruckCbm === 0) {
+                        return <span className="text-slate-400 font-mono text-xs">-</span>;
+                      }
+
+                      const percentage = Math.round(((order.totalCbm || 0) / totalTruckCbm) * 100);
+                      const badgeColor =
+                        percentage >= 85
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                          : percentage >= 65
+                          ? 'bg-blue-100 text-blue-800 border-blue-200'
+                          : 'bg-amber-100 text-amber-800 border-amber-200';
+
+                      return (
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${badgeColor}`}
+                          title={`Current CBM: ${(order.totalCbm || 0).toFixed(2)} / Trucks CBM: ${totalTruckCbm.toFixed(1)}`}
+                        >
+                          {percentage}%
+                        </span>
+                      );
+                    })()}
+                  </td>
                 </tr>
 
                 {isExpanded && hasItems && (
                   <tr className="bg-slate-50/70 border-b">
                     <td></td>
-                    <td colSpan={5} className="px-6 py-3">
+                    <td colSpan={6} className="px-6 py-3">
                       <div className="bg-white border rounded-lg p-3 shadow-sm">
                         <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">
                           Branch Item Breakdown ({order.branchName})
@@ -224,7 +260,7 @@ const OrdersTable = ({ orders }) => {
           })}
           {filteredOrders.length === 0 && (
             <tr>
-              <td colSpan={6} className="px-4 py-12 text-center">
+              <td colSpan={7} className="px-4 py-12 text-center">
                 <div className="flex flex-col items-center gap-2 text-slate-500">
                   <Search className="w-8 h-8 text-slate-300" />
                   <p className="font-semibold text-slate-600">No branches match your filters</p>
