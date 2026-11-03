@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Search, SlidersHorizontal, X } from 'lucide-react';
 
+const FULL_TRUCK_CAPACITIES = {
+  jumbo4m: 21.8,
+  NKR: 9.69,
+  dabbaba: 5.04,
+};
+
 const TRUCK_CAPACITIES = {
   jumbo4m: 18.2,
   NKR: 8.2,
@@ -105,20 +111,21 @@ const OrdersTable = ({ orders }) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto custom-scrollbar pb-4">
-      <table className="w-full text-sm text-left text-slate-600">
-        <thead className="text-xs text-slate-700 uppercase bg-slate-50">
+      <div className="overflow-x-auto custom-scrollbar pb-2">
+      <table className="w-full text-xs text-left text-slate-600 whitespace-nowrap">
+        <thead className="text-[11px] text-slate-700 uppercase bg-slate-50 tracking-wider">
           <tr>
-            <th scope="col" className="px-3 py-3 w-10"></th>
-            <th scope="col" className="px-4 py-3 rounded-tl-lg">Branch Name</th>
-            <th scope="col" className="px-4 py-3">Zone</th>
-            <th scope="col" className="px-4 py-3 text-center">QTY</th>
-            <th scope="col" className="px-4 py-3 text-center">CBM</th>
-            <th scope="col" className="px-4 py-3">Recommended Trucks</th>
-            <th scope="col" className="px-4 py-3 text-center">Truck Utilization %</th>
+            <th scope="col" className="px-2 py-2.5 w-8 text-center"></th>
+            <th scope="col" className="px-3 py-2.5 rounded-tl-lg font-semibold">Branch Name</th>
+            <th scope="col" className="px-2.5 py-2.5 font-semibold">Zone</th>
+            <th scope="col" className="px-2.5 py-2.5 text-center font-semibold">QTY</th>
+            <th scope="col" className="px-2.5 py-2.5 text-center font-semibold">CBM</th>
+            <th scope="col" className="px-3 py-2.5 font-semibold">Recommended Trucks</th>
+            <th scope="col" className="px-2.5 py-2.5 text-center font-semibold">Used (85%)</th>
+            <th scope="col" className="px-2.5 py-2.5 text-center font-semibold">Used (100%)</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-slate-100">
           {filteredOrders.map((order) => {
             const isExpanded = !!expandedOrders[order._id];
             const hasItems = order.items && order.items.length > 0;
@@ -135,53 +142,55 @@ const OrdersTable = ({ orders }) => {
 
             return (
               <React.Fragment key={order._id}>
-                <tr className="bg-white border-b hover:bg-slate-50 transition-colors">
-                  <td className="px-3 py-4 text-center">
+                <tr className="bg-white hover:bg-slate-50/80 transition-colors">
+                  <td className="px-2 py-2.5 text-center">
                     {hasItems && (
                       <button
                         onClick={() => toggleExpand(order._id)}
-                        className="p-1 hover:bg-slate-200 rounded text-slate-500 transition-colors"
+                        className="p-0.5 hover:bg-slate-200 rounded text-slate-500 transition-colors"
                         title="View Branch Items"
                       >
-                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-4 font-bold text-slate-800 flex items-center gap-2">
-                    {order.branchName}
-                    {hasItems && (
-                      <span className="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-1.5 py-0.5 rounded font-mono">
-                        {order.items.length} items
-                      </span>
-                    )}
+                  <td className="px-3 py-2.5 font-bold text-slate-800 whitespace-normal min-w-[160px] max-w-[220px]">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>{order.branchName}</span>
+                      {hasItems && (
+                        <span className="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-1 py-0.2 rounded font-mono leading-tight">
+                          {order.items.length} items
+                        </span>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-4 py-4">
-                    <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-xs">
+                  <td className="px-2.5 py-2.5">
+                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-medium">
                       {order.zone}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-center font-medium">{order.totalQty ? order.totalQty.toLocaleString() : 0}</td>
-                  <td className="px-4 py-4 text-center font-medium text-indigo-600">{(order.totalCbm || 0).toFixed(2)}</td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-wrap gap-1.5">
+                  <td className="px-2.5 py-2.5 text-center font-medium">{order.totalQty ? order.totalQty.toLocaleString() : 0}</td>
+                  <td className="px-2.5 py-2.5 text-center font-bold text-indigo-600">{(order.totalCbm || 0).toFixed(2)}</td>
+                  <td className="px-3 py-2.5 whitespace-normal">
+                    <div className="flex flex-wrap gap-1">
                       {order.recommendedTrucks?.jumbo4m > 0 && (
-                        <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-semibold">
+                        <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap">
                           Jumbo 4M ({order.recommendedTrucks.jumbo4m})
                         </span>
                       )}
                       {order.recommendedTrucks?.NKR > 0 && (
-                        <span className="bg-pink-100 text-pink-700 px-2 py-1 rounded text-xs font-semibold">
+                        <span className="bg-pink-50 text-pink-700 border border-pink-200 px-1.5 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap">
                           NKR ({order.recommendedTrucks.NKR})
                         </span>
                       )}
                       {order.recommendedTrucks?.dabbaba > 0 && (
-                        <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-semibold">
+                        <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap">
                           Dabbaba ({order.recommendedTrucks.dabbaba})
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-center font-medium">
+                  <td className="px-2.5 py-2.5 text-center font-medium">
                     {(() => {
                       const totalTruckCbm =
                         ((order.recommendedTrucks?.jumbo4m || 0) * TRUCK_CAPACITIES.jumbo4m) +
@@ -189,7 +198,7 @@ const OrdersTable = ({ orders }) => {
                         ((order.recommendedTrucks?.dabbaba || 0) * TRUCK_CAPACITIES.dabbaba);
                       
                       if (!totalTruckCbm || totalTruckCbm === 0) {
-                        return <span className="text-slate-400 font-mono text-xs">-</span>;
+                        return <span className="text-slate-400 font-mono text-[11px]">-</span>;
                       }
 
                       const percentage = Math.round(((order.totalCbm || 0) / totalTruckCbm) * 100);
@@ -202,8 +211,37 @@ const OrdersTable = ({ orders }) => {
 
                       return (
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${badgeColor}`}
-                          title={`Current CBM: ${(order.totalCbm || 0).toFixed(2)} / Trucks CBM: ${totalTruckCbm.toFixed(1)}`}
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-bold border ${badgeColor}`}
+                          title={`Current CBM: ${(order.totalCbm || 0).toFixed(2)} / Trucks CBM (85%): ${totalTruckCbm.toFixed(1)}`}
+                        >
+                          {percentage}%
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-2.5 py-2.5 text-center font-medium">
+                    {(() => {
+                      const totalFullTruckCbm =
+                        ((order.recommendedTrucks?.jumbo4m || 0) * FULL_TRUCK_CAPACITIES.jumbo4m) +
+                        ((order.recommendedTrucks?.NKR || 0) * FULL_TRUCK_CAPACITIES.NKR) +
+                        ((order.recommendedTrucks?.dabbaba || 0) * FULL_TRUCK_CAPACITIES.dabbaba);
+                      
+                      if (!totalFullTruckCbm || totalFullTruckCbm === 0) {
+                        return <span className="text-slate-400 font-mono text-[11px]">-</span>;
+                      }
+
+                      const percentage = Math.round(((order.totalCbm || 0) / totalFullTruckCbm) * 100);
+                      const badgeColor =
+                        percentage >= 85
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                          : percentage >= 65
+                          ? 'bg-blue-100 text-blue-800 border-blue-200'
+                          : 'bg-amber-100 text-amber-800 border-amber-200';
+
+                      return (
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-bold border ${badgeColor}`}
+                          title={`Current CBM: ${(order.totalCbm || 0).toFixed(2)} / Trucks CBM (100%): ${totalFullTruckCbm.toFixed(1)}`}
                         >
                           {percentage}%
                         </span>
@@ -215,35 +253,35 @@ const OrdersTable = ({ orders }) => {
                 {isExpanded && hasItems && (
                   <tr className="bg-slate-50/70 border-b">
                     <td></td>
-                    <td colSpan={6} className="px-6 py-3">
+                    <td colSpan={7} className="px-3 py-2.5 whitespace-normal">
                       <div className="bg-white border rounded-lg p-3 shadow-sm">
                         <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">
                           Branch Item Breakdown ({order.branchName})
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           {Object.entries(itemsByCategory).map(([category, categoryItems]) => (
                             <div key={category} className="border border-slate-200 rounded-lg overflow-hidden">
-                              <div className="bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                              <div className="bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 uppercase tracking-wider">
                                 {category}
                               </div>
                               <table className="w-full text-xs text-left text-slate-700">
                                 <thead className="bg-slate-100 font-semibold border-b">
                                   <tr>
-                                    <th className="py-2 px-3">Product ID</th>
-                                    <th className="py-2 px-3">Product Name</th>
-                                    <th className="py-2 px-3 text-center">Unit CBM</th>
-                                    <th className="py-2 px-3 text-center">QTY</th>
-                                    <th className="py-2 px-3 text-center">Total Item CBM</th>
+                                    <th className="py-1.5 px-2.5">Product ID</th>
+                                    <th className="py-1.5 px-2.5">Product Name</th>
+                                    <th className="py-1.5 px-2.5 text-center">Unit CBM</th>
+                                    <th className="py-1.5 px-2.5 text-center">QTY</th>
+                                    <th className="py-1.5 px-2.5 text-center">Total Item CBM</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {categoryItems.map((item, idx) => (
                                     <tr key={`${category}-${idx}`} className="border-b last:border-none hover:bg-slate-50">
-                                      <td className="py-2 px-3 font-mono text-slate-600">{item.productId || '-'}</td>
-                                      <td className="py-2 px-3 font-medium">{item.productName || '-'}</td>
-                                      <td className="py-2 px-3 text-center">{(item.unitCbm || 0).toFixed(4)}</td>
-                                      <td className="py-2 px-3 text-center font-semibold">{item.qty}</td>
-                                      <td className="py-2 px-3 text-center font-semibold text-indigo-600">{(item.cbm || 0).toFixed(3)}</td>
+                                      <td className="py-1.5 px-2.5 font-mono text-slate-600">{item.productId || '-'}</td>
+                                      <td className="py-1.5 px-2.5 font-medium">{item.productName || '-'}</td>
+                                      <td className="py-1.5 px-2.5 text-center">{(item.unitCbm || 0).toFixed(4)}</td>
+                                      <td className="py-1.5 px-2.5 text-center font-semibold">{item.qty}</td>
+                                      <td className="py-1.5 px-2.5 text-center font-semibold text-indigo-600">{(item.cbm || 0).toFixed(3)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -260,7 +298,7 @@ const OrdersTable = ({ orders }) => {
           })}
           {filteredOrders.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-4 py-12 text-center">
+              <td colSpan={8} className="px-4 py-12 text-center">
                 <div className="flex flex-col items-center gap-2 text-slate-500">
                   <Search className="w-8 h-8 text-slate-300" />
                   <p className="font-semibold text-slate-600">No branches match your filters</p>
